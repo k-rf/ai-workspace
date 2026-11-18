@@ -9,7 +9,7 @@ description: ai-workspace 環境で公式 `ntn` CLI を使い、Notion のペー
 ## 1. 事前確認：バイナリ・標準入力・認証
 
 1. **バイナリの確認**:
-   - `PATH` 上の `ntn` を使用します（`.agents/environment.json` → `.agents/install.sh` によりグローバルインストールされ、クラウド環境では `$HOME/.local/bin/ntn` に配置されます）。見つからない場合は `bash .agents/install.sh` を実行するか `$HOME/.local/bin/ntn` を確認してください。
+   - `PATH` 上の `ntn` を使用します（`.agents/environment.json` → `.agents/install.sh` により `pnpm` でグローバルインストールされ、`$PNPM_HOME/bin/ntn`〔標準 `~/.local/share/pnpm/bin/ntn`〕に配置されます）。見つからない場合は `bash .agents/install.sh` を実行するか `"${PNPM_HOME:-$HOME/.local/share/pnpm}/bin/ntn"` を確認してください。
 2. **【重要】ボディ入力を渡さないコマンドには必ず `< /dev/null` を付ける**:
    - `ntn` は非 TTY シェル（エージェント実行環境など）で標準入力が開いていると、暗黙の JSON リクエストボディを読み込もうとして無期限に待機する場合があります。
    - `--data` / `--filter-file -` / `< file` などで意図的に標準入力を渡す場合を除き、`ntn whoami`・`ntn doctor`・`ntn api ...`・`ntn pages get`・`ntn pages create --content ...`・`ntn pages edit --content ...`・`ntn datasources ...` には**必ず `< /dev/null` を付けてください**。

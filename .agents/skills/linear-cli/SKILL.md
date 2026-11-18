@@ -9,7 +9,7 @@ AI エージェント向けに JSON 専用出力で設計された `linearis` CL
 ## 1. 事前確認：バイナリと認証
 
 1. **バイナリの確認**:
-   - `PATH` 上の `linearis`（または `linear`）を使用します（`.agents/environment.json` → `.agents/install.sh` によりグローバルインストールされ、クラウド環境では `$HOME/.local/bin/linearis` に配置されます）。見つからない場合は `bash .agents/install.sh` を実行するか `$HOME/.local/bin/linearis` を確認してください。
+   - `PATH` 上の `linearis`（または `linear`）を使用します（`.agents/environment.json` → `.agents/install.sh` により `pnpm` でグローバルインストールされ、`$PNPM_HOME/bin/linearis`〔標準 `~/.local/share/pnpm/bin/linearis`〕に配置されます）。見つからない場合は `bash .agents/install.sh` を実行するか `"${PNPM_HOME:-$HOME/.local/share/pnpm}/bin/linearis"` を確認してください。
 2. **ローカル `.env` の読み込み（トークンを出力しない）**:
    ```bash
    set -a; [ -f .env ] && . ./.env; set +a
@@ -79,9 +79,9 @@ linearis issues resolve THREAD_UUID --with-comment COMMENT_UUID
 
 ### C. トランザクション一括作成／更新（`issues batch create` / `update`）
 
-`issues batch create` と `issues batch update` は全件成功／全件ロールバックで実行され、未知の JSON キーは厳格に拒否されます。JSON Schema がグローバルインストール先パッケージ内に同梱されています。
-- `"$(npm root -g)/linearis/schemas/issues-batch-create.schema.json"`
-- `"$(npm root -g)/linearis/schemas/issues-batch-update.schema.json"`
+`issues batch create` と `issues batch update` は全件成功／全件ロールバックで実行され、未知の JSON キーは厳格に拒否されます。JSON Schema はグローバルインストール先パッケージ内に同梱されています（`find -L "$(pnpm root -g)" -path '*/linearis/schemas/*.schema.json'` で参照可能）：
+- `issues-batch-create.schema.json`
+- `issues-batch-update.schema.json`
 
 ペイロードは `/tmp/` に保存・検証してから実行してください。
 

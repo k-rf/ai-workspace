@@ -1,10 +1,10 @@
 # ai-workspace
 
-Python（`uv`）、Node.js / TypeScript（`npm` + `tsx`）、Google Workspace 自動化（`gdrive`, `gdocs`, `gsheets`, `gslides`, `gcalendar`）、Notion（`ntn`）、Linear（`linearis`）向けのワークスペースです。
+Python（`uv`）、Node.js / TypeScript（`pnpm` + `tsx`）、Google Workspace 自動化（`gdrive`, `gdocs`, `gsheets`, `gslides`, `gcalendar`）、Notion（`ntn`）、Linear（`linearis`）向けのワークスペースです。
 
 ## 環境セットアップ
 
-クラウド環境では [`.agents/environment.json`](.agents/environment.json) から [`.agents/install.sh`](.agents/install.sh) が自動実行され、依存パッケージの同期、`ntn`・`linearis` のグローバルインストール（書込不可時は `~/.local` へ自動設定）、`.agents/skills/` の `$HOME/.agents/skills/` への反映を行います。
+クラウド環境では [`.agents/environment.json`](.agents/environment.json) から [`.agents/install.sh`](.agents/install.sh) が自動実行され、依存パッケージの同期、`ntn`・`linearis` のグローバルインストール（`$PNPM_HOME/bin` への配置と `PATH` 設定）、`.agents/skills/` の `$HOME/.agents/skills/` への反映を行います。
 
 ローカル環境でセットアップする場合：
 
@@ -14,12 +14,15 @@ bash .agents/install.sh
 
 # または個別にセットアップする場合
 uv sync
-npm ci
-npm install -g ntn linearis
+pnpm install --frozen-lockfile
+pnpm add -g --allow-build=ntn ntn linearis
 
 # 任意: Notion / Linear トークンを .env に設定（gitignore 対象）
 cp .env.example .env
 ```
+
+> [!NOTE]
+> Node.js 依存の `esbuild` およびグローバル CLI の `ntn` はインストール時スクリプトを使用するため、[`pnpm-workspace.yaml`](pnpm-workspace.yaml)（`allowBuilds: esbuild: true`）および `--allow-build=ntn` でビルド実行を許可しています。
 
 ## よく使うコマンド
 
@@ -33,14 +36,14 @@ uv run ruff check .  # Linter を実行
 ### TypeScript / Node.js
 
 ```bash
-npm run typecheck    # tsc --noEmit による型チェック
-npm run build        # dist/ へビルド
-npm start            # tsx で src/index.ts を実行
+pnpm run typecheck   # tsc --noEmit による型チェック
+pnpm run build       # dist/ へビルド
+pnpm start           # tsx で src/index.ts を実行
 ```
 
 ### Notion（`ntn`）および Linear（`linearis`）CLI
 
-両 CLI は [`.agents/install.sh`](.agents/install.sh) によってグローバルインストールされます（クラウド環境では `~/.local/bin/ntn` および `~/.local/bin/linearis`）。
+両 CLI は [`.agents/install.sh`](.agents/install.sh) によって `pnpm` でグローバルインストールされます（標準配置先: `$PNPM_HOME/bin/ntn`、`~/.local/share/pnpm/bin/linearis` 等）。
 
 #### Notion（`ntn`）
 

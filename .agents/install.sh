@@ -12,28 +12,6 @@ append_bashrc_line() {
   grep -qxF "${line}" "${bashrc}" 2>/dev/null || printf '%s\n' "${line}" >> "${bashrc}"
 }
 
-can_write_npm_prefix() {
-  local prefix="$1"
-  local lib_dir="${prefix}/lib/node_modules"
-  local bin_dir="${prefix}/bin"
-
-  if [ -d "${lib_dir}" ]; then
-    [ -w "${lib_dir}" ] || return 1
-  elif [ -d "${prefix}/lib" ]; then
-    [ -w "${prefix}/lib" ] || return 1
-  else
-    [ -w "${prefix}" ] || return 1
-  fi
-
-  if [ -d "${bin_dir}" ]; then
-    [ -w "${bin_dir}" ] || return 1
-  else
-    [ -w "${prefix}" ] || return 1
-  fi
-
-  return 0
-}
-
 # Remove non-interactive early-return guard from ~/.bashrc so BASH_ENV picks up exports
 sed -i '/case \$- in/,/esac/d' "${HOME}/.bashrc" 2>/dev/null || true
 
@@ -43,28 +21,28 @@ append_bashrc_line 'export UV_SYSTEM_CERTS=true'
 
 UV_SYSTEM_CERTS=true UV_LINK_MODE=copy uv sync
 
-# Install repository Node.js / TypeScript dependencies
-if [ -f package-lock.json ]; then
-  npm ci --prefer-offline --no-audit --no-fund
+# Configure non-interactive Corepack & user-space pnpm global home
+export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+export PNPM_HOME="${PNPM_HOME:-${HOME}/.local/share/pnpm}"
+mkdir -p "${PNPM_HOME}/bin"
+case ":${PATH}:" in
+  *":${PNPM_HOME}/bin:"*) ;;
+  *) export PATH="${PNPM_HOME}/bin:${PNPM_HOME}:${PATH}" ;;
+esac
+
+append_bashrc_line 'export COREPACK_ENABLE_DOWNLOAD_PROMPT=0'
+append_bashrc_line 'export PNPM_HOME="${PNPM_HOME:-$HOME/.local/share/pnpm}"'
+append_bashrc_line 'case ":$PATH:" in *":$PNPM_HOME/bin:"*) ;; *) export PATH="$PNPM_HOME/bin:$PNPM_HOME:$PATH" ;; esac'
+
+# Install repository Node.js / TypeScript dependencies via pnpm
+if [ -f pnpm-lock.yaml ]; then
+  pnpm install --prefer-offline --frozen-lockfile
 else
-  npm install --no-audit --no-fund
+  pnpm install --prefer-offline --allow-build=esbuild
 fi
 
-# Install Notion (ntn) and Linear (linearis) CLIs globally.
-# Fall back to ~/.local when the default global npm prefix is not writable (e.g. cloud VMs).
-CURRENT_NPM_PREFIX="$(npm prefix -g)"
-if ! can_write_npm_prefix "${CURRENT_NPM_PREFIX}"; then
-  mkdir -p "${HOME}/.local"
-  export NPM_CONFIG_PREFIX="${HOME}/.local"
-  append_bashrc_line 'export NPM_CONFIG_PREFIX="$HOME/.local"'
-  append_bashrc_line 'export PATH="$HOME/.local/bin:$PATH"'
-elif [ "${CURRENT_NPM_PREFIX}" = "${HOME}/.local" ]; then
-  mkdir -p "${HOME}/.local"
-  append_bashrc_line 'export NPM_CONFIG_PREFIX="$HOME/.local"'
-  append_bashrc_line 'export PATH="$HOME/.local/bin:$PATH"'
-fi
-
-npm install -g --prefer-offline --no-audit --no-fund ntn linearis
+# Install Notion (ntn) and Linear (linearis) CLIs globally via pnpm
+pnpm add -g --prefer-offline --allow-build=ntn ntn linearis
 
 # Sync project skills to $HOME/.agents/skills/
 if [ -d .agents/skills ]; then
