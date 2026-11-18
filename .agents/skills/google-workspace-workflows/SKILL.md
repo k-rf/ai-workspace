@@ -4,7 +4,7 @@ description: Orchestrates multi-step Google Workspace workflows across Drive, Do
 ---
 # Google Workspace Workflows
 
-Coordinate tasks across Google Drive (`gdrive`), Docs (`gdocs`), Sheets (`gsheets`), Slides (`gslides`), and Calendar (`gcalendar`), combining them with Python (`uv run`) or TypeScript (`npm start` / `npx tsx`) in `ai-workspace`.
+Coordinate tasks across Google Drive (`gdrive`), Docs (`gdocs`), Sheets (`gsheets`), Slides (`gslides`), and Calendar (`gcalendar`), combining them with Python (`uv run`) or TypeScript (`pnpm start` / `pnpm exec tsx`) in `ai-workspace`.
 
 ## 1. Pre-Flight & Plugin Lookup
 
@@ -45,7 +45,7 @@ Coordinate tasks across Google Drive (`gdrive`), Docs (`gdocs`), Sheets (`gsheet
    - Read small ranges directly: `gsheets readonly read SPREADSHEET_ID 'Sheet1!A1:F50' --json` (add `--markdown-links` on `read-all` or use `readonly read-links` when cells contain hyperlinks or Smart Chips).
    - Export full tabs for analysis: `gsheets readonly export SPREADSHEET_ID /tmp/input.csv --format csv --sheet "Sheet1"`.
 2. **Transform locally**:
-   - Run Python scripts with `uv run python ...` or TypeScript scripts with `npx tsx ...`.
+   - Run Python scripts with `uv run python ...` or TypeScript scripts with `pnpm exec tsx ...`.
 3. **Load & Verify**:
    - Write the narrowest range needed so existing formulas, validation rules, and formatting stay intact.
    - For `gsheets mutate batch SPREADSHEET_ID -f requests.json`, always use the `"data"` key (`[[...]]`), never `"values"`.
