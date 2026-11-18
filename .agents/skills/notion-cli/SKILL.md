@@ -1,107 +1,107 @@
 ---
 name: notion-cli
-description: Read, search, create, update, and manage Notion pages, databases/data sources, blocks, comments, and file uploads via the `ntn` CLI in ai-workspace. Use when the user shares a notion.so / notion.site URL or asks to query Notion databases, read/edit Notion pages, search Notion content, or call the Notion API.
+description: ai-workspace 環境で公式 `ntn` CLI を使い、Notion のページ、データベース／データソース、ブロック、コメント、ファイルアップロードの検索・取得・作成・更新を行う。ユーザーが notion.so / notion.site の URL を共有した場合や、Notion のデータベース照会・ページ読み書き・コンテンツ検索・API 呼び出しを依頼したときに使用する。
 ---
 # Notion CLI (`ntn`)
 
-Operate Notion workspaces from the terminal via the official `ntn` CLI (`@notionhq/ntn`, installed in `ai-workspace/node_modules/.bin/ntn`).
+公式 Notion CLI（`ntn`、グローバルインストール済み）を使ってターミナルから Notion ワークスペースを操作するためのスキルです。
 
-## 1. Pre-Flight: Binary, Stdin & Authentication
+## 1. 事前確認：バイナリ・標準入力・認証
 
-1. **Locate the binary**:
-   - Prefer `ntn` on `PATH` (symlinked into `$HOME/.local/bin/ntn` by `.agents/environment.json`), or invoke `./node_modules/.bin/ntn` from the repo root (fallback: `npx --no-install ntn`).
-2. **CRITICAL — Always redirect stdin (`< /dev/null`) when not piping a body**:
-   - In non-interactive shells, `ntn` checks whether stdin is non-TTY and waits indefinitely for an implicit JSON body unless stdin reaches EOF or `--data` / `--filter-file -` / `< file` is explicitly used.
-   - **Always append `< /dev/null`** to `ntn whoami`, `ntn doctor`, `ntn api ...` (without `-d @-`), `ntn pages get`, `ntn pages create --content ...`, `ntn pages edit --content ...`, and `ntn datasources ...` (without `--filter-file -`).
-3. **Load local env cleanly (without printing secrets)** if `.env` is present:
+1. **バイナリの確認**:
+   - `PATH` 上の `ntn` を使用します（`.agents/environment.json` → `.agents/install.sh` によりグローバルインストールされ、クラウド環境では `$HOME/.local/bin/ntn` に配置されます）。見つからない場合は `bash .agents/install.sh` を実行するか `$HOME/.local/bin/ntn` を確認してください。
+2. **【重要】ボディ入力を渡さないコマンドには必ず `< /dev/null` を付ける**:
+   - `ntn` は非 TTY シェル（エージェント実行環境など）で標準入力が開いていると、暗黙の JSON リクエストボディを読み込もうとして無期限に待機する場合があります。
+   - `--data` / `--filter-file -` / `< file` などで意図的に標準入力を渡す場合を除き、`ntn whoami`・`ntn doctor`・`ntn api ...`・`ntn pages get`・`ntn pages create --content ...`・`ntn pages edit --content ...`・`ntn datasources ...` には**必ず `< /dev/null` を付けてください**。
+3. **ローカル `.env` の読み込み（トークンを出力しない）**:
    ```bash
    set -a; [ -f .env ] && . ./.env; set +a
    ```
-4. **Verify authentication before workspace calls**:
+4. **操作前に認証状態を確認する**:
    ```bash
    ntn whoami --json < /dev/null
    ```
-   - `ntn doctor < /dev/null` prints configuration/health checks (exits `0` even with warnings — inspect output lines rather than relying on exit code alone).
-   - **Recommended for Remote Agents / automation**: Set `NOTION_API_TOKEN` in the environment or gitignored `.env`. Integration tokens work without a browser or OS keyring, and **`ntn pages` commands currently require `NOTION_API_TOKEN`**.
-   - **Headless OAuth alternative** (requires full workspace member role): Linux cloud VMs lack an OS keyring, so pass `NOTION_KEYRING=0`:
-     1. Run `NOTION_KEYRING=0 ntn login --no-browser < /dev/null` to generate a URL + verification code.
-     2. Ask the user to authorize in their browser and confirm the code matches.
-     3. Redeem with `NOTION_KEYRING=0 ntn login poll < /dev/null`.
-     - Optionally set `NOTION_HOME="$HOME/.gemini/notion"` if persistence across Remote Agent sessions is wanted (note `~/.gemini` is shared across Remote Agent conversations for the same user).
-   - **Remote Agents network allowlist**: Outside Turbo mode, `api.notion.com` (and `developers.notion.com` if refreshing `ntn api` OpenAPI cache) must be allowed.
+   - `ntn doctor < /dev/null` は設定や接続状況の診断を表示します（警告があっても終了コード `0` を返すため、終了コードではなく出力内容を確認してください）。`ntn auth token` や `--unsafe-verbose` は認証情報を露出させるためログやチャットへ出力しないでください。
+   - **Remote Agents / 自動処理の推奨設定**: 環境変数または gitignore 済みの `.env` に `NOTION_API_TOKEN` を設定します。インテグレーショントークンはブラウザや OS キーリング不要で動作し、**`ntn pages` コマンド群は現在 `NOTION_API_TOKEN` が必須**です。
+   - **ヘッドレス OAuth での代替手順**（ワークスペースのフルメンバー権限が必要）: Linux クラウド VM には OS キーリングがないため `NOTION_KEYRING=0` を指定します。
+     1. `NOTION_KEYRING=0 ntn login --no-browser < /dev/null` を実行し、表示された URL と確認コードをユーザーへ共有します。
+     2. ユーザーにブラウザで承認し、確認コードの一致を確認してもらいます。
+     3. `NOTION_KEYRING=0 ntn login poll < /dev/null` を実行してトークンを保存します。
+     - Remote Agent の別セッションにも認証状態を引き継ぎたい場合は `NOTION_HOME="$HOME/.gemini/notion"` を設定できます（`~/.gemini` は同一ユーザーの Remote Agent 会話間で共有される点に留意してください）。
+   - **Remote Agents ネットワーク許可設定**: Turbo モード以外で実行する場合、`api.notion.com`（および `ntn api` の OpenAPI 仕様キャッシュ取得時は `developers.notion.com`）への送信を許可する必要があります。
 
-## 2. Discovery-First API Workflow
+## 2. API 探索ファーストのワークフロー
 
-Inspect supported Notion endpoints and schemas before constructing requests:
+パスやリクエスト形式を推測せず、まずライブ／キャッシュ済み OpenAPI 仕様を確認します。
 
 ```bash
-# List public API endpoints (uses live or cached OpenAPI spec; no token required)
+# サポートされている公開 API エンドポイント一覧を表示（認証不要）
 ntn api ls --plain < /dev/null
 
-# Inspect schema or full Markdown documentation for a specific endpoint
+# 特定エンドポイントの縮小 OpenAPI スキーマまたは公式ドキュメントを表示
 ntn api v1/search --spec -X POST < /dev/null
 ntn api v1/pages --docs -X POST < /dev/null
 ```
 
 > [!NOTE]
-> Avoid piping `ntn api ls` directly to `head` — closing stdout early can trigger a Rust broken-pipe panic. Filter with `grep` or inspect output cleanly instead.
+> `ntn api ls` の出力を直接 `head` へパイプすると標準出力クローズ時に Rust 側の broken pipe パニックが出るため、`grep` 等で絞り込むかそのまま参照してください。
 
-Search Notion pages and data sources by title:
+ページやデータソースをタイトルで検索する例：
 
 ```bash
 ntn api v1/search query="Project Plan" page_size:=10 < /dev/null
 ```
 
-## 3. Common Operations
+## 3. 主な操作パターン
 
-### A. Databases & Data Sources (API 2025-09-03+)
+### A. データベースとデータソース（API 2025-09-03 以降）
 
-Databases can contain multiple data sources. Resolve a database ID before querying if uncertain:
+1 つのデータベースが複数のデータソースを持つ場合があります。データベース ID を扱う際は先にデータソース ID を解決してください。
 
 ```bash
-# List data source IDs inside a database
+# データベース ID に紐づくデータソース ID 一覧を取得
 ntn datasources resolve DATABASE_ID --json < /dev/null
 
-# Query by data source ID, single-source database ID, or Notion URL
+# データソース ID、単一ソースのデータベース ID、または Notion URL でクエリ
 ntn datasources query ID_OR_URL --limit 25 --json < /dev/null
 ntn datasources query ID_OR_URL -s "Updated desc" \
   --filter '{"property":"Status","status":{"equals":"In Progress"}}' --json < /dev/null
 ```
 
-For large or nested filters, write JSON to `/tmp/notion-filter.json` and run `ntn datasources query ID_OR_URL --filter-file /tmp/notion-filter.json --json < /dev/null`.
+複雑なフィルタ条件は `/tmp/notion-filter.json` に書き出し、`ntn datasources query ID_OR_URL --filter-file /tmp/notion-filter.json --json < /dev/null` で渡します。
 
-### B. Reading & Writing Pages as Markdown (`ntn pages`)
+### B. Markdown としてのページ読み書き（`ntn pages`）
 
-`ntn pages` requires `NOTION_API_TOKEN`:
+`ntn pages` を使う場合は `NOTION_API_TOKEN` の設定が必要です。
 
 ```bash
-# Read page Markdown (includes YAML frontmatter with page properties)
+# ページを Markdown（先頭にプロパティのフロントマター付き）で取得
 ntn pages get PAGE_ID < /dev/null
-# If stderr warns about truncated Markdown, inspect unknown_block_ids via --json:
+# stderr に省略・未知ブロックの案内が出た場合は --json で unknown_block_ids を確認
 ntn pages get PAGE_ID --json < /dev/null
 
-# Create a page (parent format: page:<id>, database:<id>, or data-source:<id>)
+# ページ新規作成（--parent は page:<id> / database:<id> / data-source:<id>）
 ntn pages create --parent data-source:DATA_SOURCE_ID --content '# Title\n\nBody' --json < /dev/null
 ntn pages create --parent page:PARENT_ID < /tmp/page.md
 
-# Replace page Markdown content (leading frontmatter is stripped automatically)
+# ページ本文の Markdown を更新（get 出力のフロントマターは自動で取り除かれる）
 ntn pages edit PAGE_ID --content '# Updated Title\n\nBody' --json < /dev/null
 ntn pages edit PAGE_ID < /tmp/updated.md
 ```
 
-### C. Structured Properties, Blocks & Comments (`ntn api`)
+### C. 構造化プロパティ・ブロック・コメント操作（`ntn api`）
 
-Use `ntn api` for database item properties, appending blocks without overwriting the whole page, comments, or moving pages:
+DB 項目のプロパティ更新、ページ全体を上書きしないブロック追記、コメント操作、ページ移動などは `ntn api` を使います。
 
-- **Inline input syntax** (`:=` typed JSON, `=` string, `==` query param, `:` header):
-  - `ntn api v1/blocks/PAGE_ID/children page_size:=50 < /dev/null` (`GET`)
-  - `ntn api v1/comments block_id==PAGE_ID < /dev/null` (`GET`)
-- **File payload syntax** (preferred for nested objects — keep temp files in `/tmp/`):
-  - Append blocks: `ntn api v1/blocks/PAGE_ID/children -X PATCH -d @/tmp/blocks.json < /dev/null`
-  - Update properties: `ntn api v1/pages/PAGE_ID -X PATCH -d @/tmp/props.json < /dev/null`
-  - Create page with properties: `ntn api v1/pages -d @/tmp/new-page.json < /dev/null`
+- **インライン入力構文**（`:=` 型付き JSON、`=` 文字列、`==` クエリパラメータ、`:` ヘッダ）:
+  - `ntn api v1/blocks/PAGE_ID/children page_size:=50 < /dev/null`（`GET`）
+  - `ntn api v1/comments block_id==PAGE_ID < /dev/null`（`GET`）
+- **JSON ファイル指定**（ネストした構造向け。一時ファイルは必ず `/tmp/` に置く）:
+  - ブロック追記: `ntn api v1/blocks/PAGE_ID/children -X PATCH -d @/tmp/blocks.json < /dev/null`
+  - プロパティ更新: `ntn api v1/pages/PAGE_ID -X PATCH -d @/tmp/props.json < /dev/null`
+  - プロパティ付きページ作成: `ntn api v1/pages -d @/tmp/new-page.json < /dev/null`
 
-### D. File Uploads (`ntn files`)
+### D. ファイルアップロード（`ntn files`）
 
 ```bash
 ntn files create --filename report.pdf --content-type application/pdf < /tmp/report.pdf
@@ -109,9 +109,9 @@ ntn files create --external-url https://example.com/asset.png < /dev/null
 ntn files list < /dev/null
 ```
 
-## 4. Safety Guardrails
+## 4. 安全ガードレール
 
-- **Read before writing**: Inspect target page content or database/data-source properties (`ntn api v1/data_sources/ID < /dev/null`) before creating or updating records.
-- **Protect existing blocks**: `ntn pages edit` replaces page Markdown content and refuses to delete child pages/databases without `--allow-deleting-content`. When appending sections or editing pages with rich unsupported blocks, use `ntn api v1/blocks/<id>/children -X PATCH` instead.
-- **No unrequested destructive actions**: Never run `ntn pages trash --yes`, `ntn pages edit --allow-deleting-content`, `ntn api ... -X DELETE`, or `ntn workers delete` unless the user explicitly asks for that deletion.
-- **Secret & workspace hygiene**: Never run `ntn auth token` or `--unsafe-verbose` into logs or chat output, never commit tokens, and keep temporary JSON/Markdown files in `/tmp/`.
+- **変更前に必ず読み取る**: ページやデータベース項目を作成・更新する前に、`ntn pages get` や `ntn api v1/data_sources/ID < /dev/null` で既存内容とプロパティ定義を確認してください。
+- **既存コンテンツの保護**: `ntn pages edit` はページ本文全体を Markdown で置き換え、子ページ／子データベースの削除を伴う変更は `--allow-deleting-content` なしでは拒否されます。末尾への追記や複雑なブロックを保持したい場合は `ntn api v1/blocks/<id>/children -X PATCH` を使用してください。
+- **無断の破壊的操作を禁止**: ユーザーが明示的に指示しない限り、`ntn pages trash --yes`・`ntn pages edit --allow-deleting-content`・`ntn api ... -X DELETE`・`ntn workers delete` を実行しないでください。
+- **秘密情報とリポジトリの保護**: `NOTION_API_TOKEN` や `auth.json`、`ntn auth token`、`--unsafe-verbose` の出力を表示・コミットせず、一時ファイルは `/tmp/` にのみ作成してください。
