@@ -29,16 +29,13 @@ cp .env.example .env
 ### Python
 
 ```bash
-uv run pytest        # テストを実行
 uv run ruff check .  # Linter を実行
 ```
 
 ### TypeScript / Node.js
 
 ```bash
-pnpm run typecheck   # tsc --noEmit による型チェック
-pnpm run build       # dist/ へビルド
-pnpm start           # tsx で src/index.ts を実行
+pnpm exec tsx <script.ts>   # スクリプトを実行
 ```
 
 ### Notion（`ntn`）および Linear（`linearis`）CLI

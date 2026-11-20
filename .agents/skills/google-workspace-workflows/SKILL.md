@@ -4,7 +4,7 @@ description: Orchestrates multi-step Google Workspace workflows across Drive, Do
 ---
 # Google Workspace Workflows
 
-Coordinate tasks across Google Drive (`gdrive`), Docs (`gdocs`), Sheets (`gsheets`), Slides (`gslides`), and Calendar (`gcalendar`), combining them with Python (`uv run`) or TypeScript (`pnpm start` / `pnpm exec tsx`) in `ai-workspace`.
+Coordinate tasks across Google Drive (`gdrive`), Docs (`gdocs`), Sheets (`gsheets`), Slides (`gslides`), and Calendar (`gcalendar`), combining them with Python (`uv run`) or TypeScript (`pnpm exec tsx`) in `ai-workspace`.
 
 ## 1. Pre-Flight & Plugin Lookup
 
