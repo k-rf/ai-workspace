@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "notion": {
+      "serverUrl": "https://mcp.notion.com/mcp"
+    },
+    "toggl": {
+      "serverUrl": "https://focus.toggl.com/mcp"
+    }
+  }
+}

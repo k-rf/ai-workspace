@@ -77,8 +77,19 @@ linearis issues list --limit 10
 
 Turbo モード以外で利用する場合は、以下のホストへのアウトバウンド HTTPS 通信を許可してください。
 
-- Notion: `api.notion.com`（`ntn api` の OpenAPI 探索を使う場合は `developers.notion.com` も）
+- Notion: `api.notion.com`（MCP 利用時は `mcp.notion.com`、`ntn api` の OpenAPI 探索を使う場合は `developers.notion.com` も）
 - Linear: `api.linear.app`
+- Toggl Track: `focus.toggl.com`（MCP 利用時）
+
+### MCP サーバー
+
+[`.agents/mcp_config.json`](.agents/mcp_config.json) に以下の公式リモート MCP サーバーを設定しています。
+
+- **設定済みサーバー**:
+  - `notion`: `https://mcp.notion.com/mcp`
+  - `toggl`: `https://focus.toggl.com/mcp`
+- **初回認証**: Antigravity の MCP 設定画面または CLI の `/mcp` から OAuth 認証を行ってください。
+- **ヘッドレス環境**: Remote Agents 等でブラウザ OAuth が使えない場合は、上記の `ntn` CLI（`NOTION_API_TOKEN`）など CLI ベースの連携を使用します。
 
 ## プロジェクトスキル
 
