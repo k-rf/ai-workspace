@@ -1,0 +1,37 @@
+{
+  "name": "ai-workspace-server",
+  "remoteUser": "ai-workspace",
+  "dockerComposeFile": "../compose.dev.yaml",
+  "initializeCommand": ".devcontainer/script/initialize-command.sh",
+  "postCreateCommand": ".devcontainer/server/script/post-created-command.sh ${localEnv:HOME}",
+  "postStartCommand": ".devcontainer/server/script/post-start-command.sh",
+  "service": "server",
+  "runServices": ["server"],
+  "features": {
+    "ghcr.io/itsmechlark/features/1password": "latest",
+    "ghcr.io/devcontainers/features/github-cli": "latest",
+    "ghcr.io/devcontainers/features/sshd": "latest",
+    "ghcr.io/devcontainers/features/docker-outside-of-docker": {
+      "version": "latest",
+      "moby": false
+    }
+  },
+  "workspaceFolder": "/workspaces/ai-workspace",
+  "overrideCommand": true,
+  "shutdownAction": "none",
+  "mounts": [
+    {
+      "source": "${localEnv:HOME}/.gitconfig",
+      "target": "/home/ai-workspace/.gitconfig",
+      "type": "bind"
+    },
+    {
+      "source": "${localEnv:HOME}/.ssh/agent",
+      "target": "/home/ai-workspace/.ssh/agent",
+      "type": "bind"
+    }
+  ],
+  "containerEnv": {
+    "SSH_AUTH_SOCK": "/home/ai-workspace/.ssh/agent/agent.sock"
+  }
+}

@@ -1,0 +1,131 @@
+x-common: &common
+  build:
+    context: .
+    dockerfile: ./Dockerfile.dev
+    args:
+      - REMOTE_USER=${ROOT_REMOTE_USER}
+      - REMOTE_WORKSPACES=${ROOT_REMOTE_WORKSPACES}
+      - REMOTE_HOME=${ROOT_REMOTE_HOME}
+  group_add:
+    - root
+  # Codex の Linux sandbox で bubblewrap が user namespace を作成できるようにする
+  security_opt:
+    - seccomp:unconfined
+  env_file:
+    - .env
+    - .env.local
+  working_dir: ${ROOT_REMOTE_WORKSPACES}
+  user: ${ROOT_REMOTE_USER}
+  tty: true
+
+x-volume-repo: &volume-repo
+  type: bind
+  source: ..
+  target: ${PROJECT_ROOT}
+
+x-volume-claude: &volume-claude
+  type: bind
+  source: ${HOME}/.claude
+  target: ${ROOT_REMOTE_HOME}/.claude
+
+x-volume-codex: &volume-codex
+  type: bind
+  source: ${HOME}/.codex
+  target: ${ROOT_REMOTE_HOME}/.codex
+
+x-volume-cursor: &volume-cursor
+  type: bind
+  source: ${HOME}/.cursor
+  target: ${ROOT_REMOTE_HOME}/.cursor
+
+x-volume-gemini: &volume-gemini
+  type: bind
+  source: ${HOME}/.gemini
+  target: ${ROOT_REMOTE_HOME}/.gemini
+
+x-volume-claude-json: &volume-claude-json
+  type: bind
+  source: ${HOME}/.claude.json
+  target: ${ROOT_REMOTE_HOME}/.claude.json
+
+x-volume-cursor-auth: &volume-cursor-auth
+  type: bind
+  source: ${HOME}/.config/cursor/auth.json
+  target: ${ROOT_REMOTE_HOME}/.config/cursor/auth.json
+
+x-volume-ghealth: &volume-ghealth
+  type: bind
+  source: ${HOME}/.config/ghealth
+  target: ${ROOT_REMOTE_HOME}/.config/ghealth
+
+x-volume-orca: &volume-orca
+  type: bind
+  source: ${HOME}/.orca
+  target: ${ROOT_REMOTE_HOME}/.orca
+
+x-volume-t3: &volume-t3
+  type: volume
+  source: root-t3
+  target: ${ROOT_REMOTE_HOME}/.t3
+
+x-volume-bash-history: &volume-bash-history
+  type: volume
+  source: root-bash-history
+  target: /commandhistory
+
+services:
+  editor:
+    <<: *common
+    container_name: ${ROOT_CONTAINER_NAME}-editor
+    volumes:
+      - *volume-repo
+      - *volume-claude
+      - *volume-codex
+      - *volume-cursor
+      - *volume-gemini
+      - *volume-claude-json
+      - *volume-cursor-auth
+      - *volume-ghealth
+      - *volume-orca
+      - *volume-t3
+      - *volume-bash-history
+      - type: volume
+        source: root-vscode-extensions
+        target: ${ROOT_REMOTE_HOME}/.vscode-server/extensions
+
+  server:
+    <<: *common
+    container_name: ${ROOT_CONTAINER_NAME}-server
+    ports:
+      - 2223:2222
+      - 3774:3774
+      - 6770:6770
+    volumes:
+      - *volume-repo
+      - *volume-claude
+      - *volume-codex
+      - *volume-cursor
+      - *volume-gemini
+      - *volume-claude-json
+      - *volume-cursor-auth
+      - *volume-ghealth
+      - *volume-orca
+      - *volume-t3
+      - *volume-bash-history
+      - type: volume
+        source: root-orca-config
+        target: ${ROOT_REMOTE_HOME}/.config/orca
+
+networks:
+  default:
+    name: ${NETWORK_NAME}
+
+volumes:
+  root-bash-history:
+    name: ${ROOT_BASH_HISTORY_VOLUME_NAME}
+  root-vscode-extensions:
+    name: ${ROOT_VSCODE_EXTENSIONS_VOLUME_NAME}
+  root-orca-config:
+    name: ${ROOT_ORCA_CONFIG_VOLUME_NAME}
+  root-t3:
+    name: ${ROOT_T3_VOLUME_NAME}

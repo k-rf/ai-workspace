@@ -1,0 +1,8 @@
+{
+  "folders": [
+    { "name": "ai-workspace", "path": "/workspaces/ai-workspace" },
+    { "name": "~/.gemini/antigravity-cli/worktrees", "path": "/home/ai-workspace/.gemini/antigravity-cli/worktrees" },
+    { "name": "~/.gemini", "path": "/home/ai-workspace/.gemini" },
+    { "name": "~/.claude", "path": "/home/ai-workspace/.claude" }
+  ]
+}

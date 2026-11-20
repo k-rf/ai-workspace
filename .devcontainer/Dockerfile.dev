@@ -1,0 +1,148 @@
+FROM node:24-trixie-slim AS node-base
+FROM ghcr.io/astral-sh/uv:latest AS uv-base
+
+FROM golang:1.24-trixie AS ghealth-builder
+ARG GHEALTH_COMMIT=9cf02743d9ca051500b7c1c181eb88a9ae8988a5
+RUN mkdir -p /src /out \
+  && curl -fsSL "https://github.com/Google-Health-API/google-health-cli/archive/${GHEALTH_COMMIT}.tar.gz" \
+       | tar -xz -C /src --strip-components=1 \
+  && CGO_ENABLED=0 go build -C /src -o /out/ghealth .
+
+FROM debian:trixie
+
+ARG REMOTE_USER
+ARG REMOTE_WORKSPACES
+ARG REMOTE_HOME
+ARG TARGETARCH
+
+ENV PNPM_HOME=${REMOTE_HOME}/.local/share/pnpm
+ENV UV_LINK_MODE=copy
+ENV PATH=${REMOTE_HOME}/.local/bin:${PNPM_HOME}/bin:${PNPM_HOME}:${PATH}
+
+# パッケージのインストール
+# ------------------------------------------------------------------------------
+RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
+  && apt-get install -y --no-install-recommends \
+  ca-certificates curl git gnupg less locales lsb-release openssh-client procps python3 sudo xz-utils jq zip unzip squashfs-tools libatomic1 build-essential bubblewrap \
+  xvfb libgtk-3-0t64 libnss3 libatk1.0-0t64 libatk-bridge2.0-0t64 libgbm1 libasound2t64 \
+  libxtst6 libcups2t64 libdrm2 libxkbcommon0 libpango-1.0-0 libcairo2 libatspi2.0-0t64 \
+  libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libxrender1 libx11-xcb1 libxcb-dri3-0 libxss1 \
+  && rm -rf /var/lib/apt/lists/*
+
+# Node.js / pnpm / uv / ghealth の配置
+# ------------------------------------------------------------------------------
+COPY --from=node-base /usr/local/bin/node /usr/local/bin/node
+COPY --from=node-base /usr/local/lib/node_modules /usr/local/lib/node_modules
+COPY --from=node-base /usr/local/include/node /usr/local/include/node
+RUN ln -sf ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
+  && ln -sf ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx \
+  && npm install -g pnpm@10
+
+COPY --from=uv-base /uv /uvx /usr/local/bin/
+COPY --from=ghealth-builder /out/ghealth /usr/local/bin/ghealth
+
+# ユーザー設定
+# ------------------------------------------------------------------------------
+RUN useradd -m ${REMOTE_USER} -u 1000 -s /bin/bash
+# ローカル開発環境のため許容している
+RUN echo "${REMOTE_USER} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# 日本語化対応
+# ------------------------------------------------------------------------------
+RUN sed -i -e 's/# \(ja_JP.UTF-8\)/\1/' /etc/locale.gen \
+  && locale-gen \
+  && update-locale LANG=ja_JP.UTF-8
+ENV LANG=ja_JP.UTF-8
+
+# 永続化・PATH 設定
+# ------------------------------------------------------------------------------
+RUN SNIPPET="export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhistory/.bash_history" \
+  && mkdir -p /commandhistory ${REMOTE_HOME}/.vscode-server/extensions ${REMOTE_HOME}/.ssh \
+    ${REMOTE_HOME}/.config/orca ${REMOTE_HOME}/.config/ghealth ${REMOTE_HOME}/.config/cursor \
+    ${REMOTE_HOME}/.local/bin ${PNPM_HOME}/bin ${REMOTE_HOME}/.t3 \
+  && touch /commandhistory/.bash_history \
+  && chown -R ${REMOTE_USER}:${REMOTE_USER} /commandhistory ${REMOTE_HOME}/.vscode-server ${REMOTE_HOME}/.ssh \
+    ${REMOTE_HOME}/.config ${REMOTE_HOME}/.local ${REMOTE_HOME}/.t3 \
+  && echo "${SNIPPET}" >> "${REMOTE_HOME}/.bashrc"
+
+RUN cat > /etc/profile.d/ai-workspace-path.sh <<'EOF'
+export PNPM_HOME="${HOME}/.local/share/pnpm"
+export UV_LINK_MODE=copy
+case ":${PATH}:" in
+  *":${HOME}/.local/bin:"*) ;;
+  *) PATH="${HOME}/.local/bin:${PATH}" ;;
+esac
+case ":${PATH}:" in
+  *":${PNPM_HOME}/bin:"*) ;;
+  *) PATH="${PNPM_HOME}/bin:${PNPM_HOME}:${PATH}" ;;
+esac
+export PATH
+EOF
+
+RUN cat >> "${REMOTE_HOME}/.bashrc" <<'EOF'
+
+export PNPM_HOME="${HOME}/.local/share/pnpm"
+export UV_LINK_MODE=copy
+case ":${PATH}:" in
+  *":${HOME}/.local/bin:"*) ;;
+  *) PATH="${HOME}/.local/bin:${PATH}" ;;
+esac
+case ":${PATH}:" in
+  *":${PNPM_HOME}/bin:"*) ;;
+  *) PATH="${PNPM_HOME}/bin:${PNPM_HOME}:${PATH}" ;;
+esac
+export PATH
+EOF
+
+# Orca serve（ヘッドレス。AppImage は実行せず SquashFS として展開する）
+# ------------------------------------------------------------------------------
+COPY script/extract-orca-appimage.sh /tmp/extract-orca-appimage.sh
+RUN mkdir -p /opt/orca \
+  && curl -fL https://github.com/stablyai/orca/releases/latest/download/orca-linux.AppImage \
+       -o /opt/orca/orca-linux.AppImage \
+  && sh /tmp/extract-orca-appimage.sh \
+  && rm /tmp/extract-orca-appimage.sh
+
+# difftastic（構文木ベースの横並び diff ツール）
+# ------------------------------------------------------------------------------
+RUN ARCH="${TARGETARCH:-$(dpkg --print-architecture)}" \
+  && case "${ARCH}" in \
+    arm64|aarch64) DIFFT_ARCH="aarch64-unknown-linux-gnu" ;; \
+    *) DIFFT_ARCH="x86_64-unknown-linux-gnu" ;; \
+  esac \
+  && curl -fsSL "https://github.com/Wilfred/difftastic/releases/download/0.71.0/difft-0.71.0-${DIFFT_ARCH}.tar.gz" \
+    | tar -xz -C /usr/local/bin \
+  && chmod +x /usr/local/bin/difft
+
+# ローカルにパッケージのインストール
+# ------------------------------------------------------------------------------
+USER ${REMOTE_USER}
+ENV CODEX_NON_INTERACTIVE=true
+ENV NTN_INSTALL_DIR="${REMOTE_HOME}/.local/bin"
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+
+RUN bash -c "$(curl -fsSL https://claude.ai/install.sh)"
+RUN bash -c "$(curl -fsSL https://antigravity.google/cli/install.sh)"
+RUN bash -c "$(curl -fsSL https://cursor.com/install -fsS)"
+RUN bash -c "$(curl -fsSL https://chatgpt.com/codex/install.sh)"
+RUN bash -c "$(curl -fsSL https://ntn.dev)"
+RUN pnpm add -g linearis
+RUN T3CODE_HOME="${REMOTE_HOME}/.local/share/t3code" sh -c "$(curl -fsSL https://t3.codes/install.sh)"
+RUN sh -c "$(curl -fsSL https://starship.rs/install.sh)" -- --yes \
+  && echo 'eval "$(starship init bash)"' >> ${REMOTE_HOME}/.bashrc
+
+# プロンプトのカスタマイズ
+# ------------------------------------------------------------------------------
+RUN mkdir -p ${REMOTE_HOME}/.config \
+  && { \
+  echo '[time]'; \
+  echo 'disabled = false'; \
+  echo 'utc_time_offset = "9"'; \
+  echo 'format = "🕘 [$time]($style) "'; \
+  echo ''; \
+  echo '[container]'; \
+  echo 'format = "[$symbol]($style) "'; \
+  echo ''; \
+  echo '[nodejs]'; \
+  echo 'format = "via [🏠 $version](bold green) "'; \
+  } >> ${REMOTE_HOME}/.config/starship.toml

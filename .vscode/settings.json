@@ -1,0 +1,55 @@
+{
+  "js/ts.tsdk.path": "./node_modules/typescript",
+  "js/ts.tsdk.promptToUseWorkspaceVersion": true,
+
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+
+  "editor.codeActionsOnSave": {
+    "source.fixAll": "explicit",
+    "source.addMissingImports.ts": "explicit",
+    "source.organizeImports": "never"
+  },
+  "editor.defaultColorDecorators": "always",
+  "editor.formatOnSave": true,
+  "editor.formatOnSaveMode": "file",
+
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
+  "files.trimTrailingWhitespace": true,
+
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.codeActionsOnSave": {
+      "source.fixAll": "explicit",
+      "source.organizeImports": "explicit"
+    }
+  },
+
+  "[shellscript][dotenv][ignore][properties]": {
+    "files.eol": "\n",
+    "editor.defaultFormatter": "foxundermoon.shell-format"
+  },
+
+  "[dockerfile]": {
+    "editor.quickSuggestions": {
+      "strings": true
+    },
+    "editor.defaultFormatter": "ms-azuretools.vscode-containers"
+  },
+
+  "[markdown][instructions][prompt][chatagent][skill]": {
+    "editor.unicodeHighlight.ambiguousCharacters": false,
+    "editor.unicodeHighlight.invisibleCharacters": false,
+    "editor.wordWrap": "on",
+    "editor.quickSuggestions": {
+      "comments": "off",
+      "strings": "off",
+      "other": "off"
+    },
+    "diffEditor.ignoreTrimWhitespace": false,
+    "files.trimTrailingWhitespace": false,
+    "cSpell.fixSpellingWithRenameProvider": true,
+    "cSpell.advanced.feature.useReferenceProviderWithRename": true,
+    "cSpell.advanced.feature.useReferenceProviderRemove": "/^#+\\s/"
+  }
+}

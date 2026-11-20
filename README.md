@@ -24,6 +24,17 @@ cp .env.example .env
 > [!NOTE]
 > Node.js 依存の `esbuild` およびグローバル CLI の `ntn` はインストール時スクリプトを使用するため、[`pnpm-workspace.yaml`](pnpm-workspace.yaml)（`allowBuilds: esbuild: true`）および `--allow-build=ntn` でビルド実行を許可しています。
 
+### Dev Container（`editor` / `server`）
+
+Docker 環境では [`editor`](.devcontainer/editor/devcontainer.json) と [`server`](.devcontainer/server/devcontainer.json) の 2 つの Dev Container 構成を利用できます（コンテナ内では Node.js 24・`pnpm`・`uv`・`ntn`・`linearis`・`ghealth`・各 AI エージェント CLI がビルド時に導入され、コンテナ作成時は `uv sync --frozen` と `pnpm install --frozen-lockfile` を実行します。クラウド環境向けの [`.agents/install.sh`](.agents/install.sh) とは独立しています）。
+
+- **`editor`**（`.devcontainer/editor/`）: Cursor / VS Code から開くハーネス整備・スクリプト編集用コンテナです。
+- **`server`**（`.devcontainer/server/`）: 常駐サーバー用コンテナです（`devstone-server` と同時稼働できるようポートを割り当てています）。
+  - SSH (`sshd`): ホスト `2223` -> コンテナ `2222`
+  - T3 Code (`t3 serve`): ホスト `3774` -> コンテナ `3774`
+  - Orca (`orca serve`): ホスト `6770` -> コンテナ `6770`
+- **環境変数の設定**: 初回起動時に `.devcontainer/.env.local.example` から `.devcontainer/.env.local`（gitignore 対象）が自動生成されます。`SSH_PUB_KEY`、`ORCA_PAIRING_ADDRESS`、`OP_SERVICE_ACCOUNT_TOKEN`、および各種 API トークンを設定してください。
+
 ## よく使うコマンド
 
 ### Python

@@ -7,6 +7,7 @@ __pycache__/
 
 # Node / TypeScript
 node_modules/
+.pnpm-store/
 dist/
 *.tsbuildinfo
 
@@ -14,4 +15,10 @@ dist/
 .env
 .env.*
 !.env.example
+!.devcontainer/.env
+!.devcontainer/.env.local.example
 .DS_Store
+
+# Agent local files
+.claude/settings.local.json
+.antigravitycli/
