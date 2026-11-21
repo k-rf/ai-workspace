@@ -22,3 +22,6 @@ dist/
 # Agent local files
 .claude/settings.local.json
 .antigravitycli/
+
+# Credential
+client_secret.json

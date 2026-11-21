@@ -104,3 +104,4 @@ Turbo モード以外で利用する場合は、以下のホストへのアウ�
 - [`.agents/skills/google-workspace-workflows/SKILL.md`](.agents/skills/google-workspace-workflows/SKILL.md) — Google Drive / Docs / Sheets / Slides / Calendar を横断する自動化手順と安全ガードレール
 - [`.agents/skills/notion-cli/SKILL.md`](.agents/skills/notion-cli/SKILL.md) — `ntn` を使った Notion のページ・データソース・ブロック・API 操作ガイド
 - [`.agents/skills/linear-cli/SKILL.md`](.agents/skills/linear-cli/SKILL.md) — `linearis` を使った Linear の Issue・議論スレッド・プロジェクト・一括操作ガイド
+- [`.agents/skills/ghealth-vitals/SKILL.md`](.agents/skills/ghealth-vitals/SKILL.md) — `ghealth` を使った Google Health API のバイタル情報取得・集計ガイド
